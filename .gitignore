@@ -1,0 +1,18 @@
+# Build artifacts
+build/
+build_test/
+*.o
+*.a
+*.elf
+*.bin
+*.hex
+*.map
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.bak
+*~
+
+# Nothing above should ever hide a source file.

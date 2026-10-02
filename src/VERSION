@@ -1,0 +1,26 @@
+TinyUSB vendored sources — DO NOT EDIT except sam3x/ port + tusb_option.h/tusb_mcu.h SAM3X entries.
+Upstream: https://github.com/hathach/tinyusb
+Pinned commit: b80f1c107d0a33eb3be055f95fe0b3b9d6c0be48 (master, 2026-09-22)
+License: MIT (see LICENSE).
+
+Full tree kept (device + host + ALL classes: audio, bth, cdc incl. FTDI/CP210x/CH34x/PL2303 vendor, dfu, hid, msc, midi, mtp, net, printer, usbtmc, vendor, video; device/, host/, typec/).
+
+Local deviations from upstream:
+- portable/microchip/sam3x/{dcd,hcd}_sam3x.c: SAM3X UOTGHS port (upstream has
+  no SAM3X driver) + tusb_option.h/tusb_mcu.h OPT_MCU_SAM3X entries.
+  Arduino glue: src/ArduinoTinyUSB/bsp_due.cpp (clocks from libsam).
+- portable/microchip/samd/hcd_samd.c: SETUP-token fix (is_setup), ERRORFLOW
+  NAK resume, hcd_edpt_close, SW data-toggle quirk. None upstream.
+- class/cdc/cdc_host.c make_new_itf(): default line coding 8N1 {9600,0,0,8}
+  (a zero data_bits is silently rejected by the PL2303 driver).
+- class/msc/msc_host.c: bounded TUR/sense retries (5), per-LUN TUR+capacity
+  walk clamped to CFG_TUH_MSC_MAXLUN, mount fires when all LUNs are done
+  (even zero ready, for hot-insert+rescan); app READ_CAPACITY refreshes
+  capacity[lun]. Upstream probes only LUN 0 and retries unbounded.
+- class/msc/msc_host.c tuh_msc_scsi_command(): reject unless stage IDLE
+  (overlapping CBWs corrupt the in-flight command).
+- host/usbh.c: PRINTER host driver table entry (still absent upstream;
+  AUDIO entry + tusb.h include + CFG_TUH_AUDIO default are upstream as of
+  this commit), EP-mismatch stale-drop.
+- class/printer/printer_host.c/h: backport (still absent upstream).
+- common/tusb_compiler.h: GCC-version fallthrough gate (GCC 4.8 compat).
