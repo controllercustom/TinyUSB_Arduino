@@ -83,12 +83,15 @@ extern "C" {
   #endif
 #endif
 
-// Deep event queues (do NOT trim): with CFG_TUSB_DEBUG=2 console logging
-// (~5-10ms per control transfer at 115200 baud), bursty EP0 traffic during
-// enumeration overflows the default 16-deep queue, silently dropping
+// Deep event queues (do NOT trim): bursty EP0 traffic during enumeration
+// overflows the default 16-deep queue, silently dropping
 // SETUP/xfer-complete events (observed on hardware with a Due device and a
 // Zero host).
 // 64 entries x ~12 bytes is affordable on all boards.
+// The depth is unconditional: do NOT trim it back to 16 because
+// CFG_TUSB_DEBUG is 0 — ISR latency from console logging is only part of
+// why enumeration is bursty, and re-enabling logging would bring the
+// drops straight back.
 #define CFG_TUD_TASK_QUEUE_SZ   64
 #define CFG_TUH_TASK_QUEUE_SZ   64
 
@@ -149,10 +152,17 @@ extern "C" {
 #define CFG_TUH_AUDIO_STREAM_BUFSIZE 1024
 #endif // CFG_TUH_ENABLED
 
-// Debug: #ifndef-guarded so release builds can pass -DCFG_TUSB_DEBUG=0
-// (upstream TinyUSB default) without editing files.
+// Debug off by default (upstream TinyUSB default): TU_LOG runs in the USB
+// ISR, so a ~40-char line at 115200 baud blocks for ~3.5 ms -- longer than
+// a 1 ms isochronous audio frame. Keep it 0 for audio/streaming work.
+// #ifndef-guarded, so -DCFG_TUSB_DEBUG=2 re-enables logging for bring-up
+// without editing files (both here and in
+// src/tusb_config_arduinotinyusb.h, which has the identical block).
+// CFG_TUSB_DEBUG_PRINTF stays outside the guard: arduino_debug_printf()
+// (src/ArduinoTinyUSB/bsp_common.cpp) must resolve even while logging is
+// off, or the opt-in fails at link.
 #ifndef CFG_TUSB_DEBUG
-  #define CFG_TUSB_DEBUG           2
+  #define CFG_TUSB_DEBUG           0
 #endif
 #define CFG_TUSB_DEBUG_PRINTF    arduino_debug_printf
 

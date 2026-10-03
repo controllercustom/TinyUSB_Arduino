@@ -4,6 +4,21 @@ All notable changes to TinyUSB_Arduino are documented here.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Library-wide `CFG_TUSB_DEBUG` default lowered from `2` to `0`** (the
+  upstream TinyUSB default), in both `src/tusb_config_arduinotinyusb.h` and
+  `src/config/tusb_config_common.h`. Internal `TU_LOG` output is now off unless
+  asked for; this removes ISR-context blocking that could starve a 1 ms
+  isochronous audio frame. Both headers remain `#ifndef`-guarded, so
+  `-DCFG_TUSB_DEBUG=2` still re-enables logging for bring-up without editing
+  files. `TU_ASSERT` still fires on failure (and still traps under a
+  debugger) — only its log line is gone. `CFG_TUD_TASK_QUEUE_SZ` and
+  `CFG_TUH_TASK_QUEUE_SZ` stay at 64; they are no longer justified by
+  logging latency but must not be trimmed.
+
 ## [1.0.0] — first public release
 
 ### Supported

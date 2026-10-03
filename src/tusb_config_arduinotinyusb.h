@@ -83,13 +83,16 @@ extern "C" {
 
 // Device Stack (all boards)
 #define CFG_TUD_ENABLED         1
-// Deep event queue (mirrors CFG_TUH_TASK_QUEUE_SZ below): with
-// CFG_TUSB_DEBUG=2 console logging (~5-10ms per control transfer at
-// 115200 baud), bursty EP0 traffic during enumeration overflows the
-// default 16-deep queue, silently dropping SETUP/xfer-complete events.
+// Deep event queue (mirrors CFG_TUH_TASK_QUEUE_SZ below): bursty EP0
+// traffic during enumeration overflows the default 16-deep queue,
+// silently dropping SETUP/xfer-complete events.
 // Observed on hardware: enumeration died right after SET_ADDRESS (device
 // ACKed setups in HW but SW never saw them; host saw endless NAKs on DATA
 // INs). 64 entries is affordable.
+// This depth is unconditional: do NOT trim it back to 16 because
+// CFG_TUSB_DEBUG is 0. The ISR latency from console logging is only part
+// of why enumeration is bursty — trim it again and if logging is ever
+// re-enabled (see CFG_TUSB_DEBUG below) events start going missing again.
 #define CFG_TUD_TASK_QUEUE_SZ   64
 #define CFG_TUD_CDC             2 // Dual-CDC needs 2 (cdcd_open asserts 2nd iface if 1)
 #define CFG_TUD_HID             2
@@ -109,12 +112,13 @@ extern "C" {
 
 // Host Stack (all boards)
 #define CFG_TUH_ENABLED         1
-// Deep event queue: with CFG_TUSB_DEBUG=2 console logging (~5ms per
-// transfer at 115200 baud), bursty EP0 traffic (8-byte packets for
-// large MIDI/audio descriptors) overflows the default 16-deep queue,
+// Deep event queue: bursty EP0 traffic (8-byte packets for large
+// MIDI/audio descriptors) overflows the default 16-deep queue,
 // dropping xfer-complete events and corrupting enumeration
 // ("USBH event limit (16) reached" + cascade of STALL/FAILED).
 // 64 entries x ~12 bytes is affordable on all boards.
+// Unconditional — do NOT trim to 16 just because CFG_TUSB_DEBUG is 0.
+// See the CFG_TUD_TASK_QUEUE_SZ comment above.
 #define CFG_TUH_TASK_QUEUE_SZ   64
 #define CFG_TUH_CDC             1
 #define CFG_TUH_CDC_FTDI        1
@@ -182,10 +186,15 @@ extern "C" {
   #define CFG_TUH_MIDI_TX_BUFSIZE  256
 #endif
 
-// Debug (#ifndef-guarded like config/tusb_config_common.h, so release builds
-// can pass -DCFG_TUSB_DEBUG=0 without editing files; default stays 2).
+// Debug off by default (upstream TinyUSB default): TU_LOG runs in the USB
+// ISR, so a ~40-char line at 115200 baud blocks for ~3.5 ms -- longer than
+// a 1 ms isochronous audio frame. Keep it 0 for audio/streaming work.
+// #ifndef-guarded, so -DCFG_TUSB_DEBUG=2 re-enables logging for bring-up
+// without editing files. CFG_TUSB_DEBUG_PRINTF stays outside the guard:
+// arduino_debug_printf() (src/ArduinoTinyUSB/bsp_common.cpp) must resolve
+// even while logging is off, or the opt-in fails at link.
 #ifndef CFG_TUSB_DEBUG
-  #define CFG_TUSB_DEBUG         2
+  #define CFG_TUSB_DEBUG         0
 #endif
 #define CFG_TUSB_DEBUG_PRINTF    arduino_debug_printf
 

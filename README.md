@@ -191,7 +191,7 @@ knobs:
 
 | Macro | Notes |
 |---|---|
-| `CFG_TUSB_DEBUG` | 0 = off, 1 = errors, 2 = verbose. **Use 0 for isochronous audio**: logging runs in the USB ISR, and a 40-character line at 115200 baud blocks for ~3.5 ms — longer than a 1 ms audio frame. |
+| `CFG_TUSB_DEBUG` | Defaults to `0` (off), the upstream TinyUSB default. `1` = errors, `2` = verbose. Opt in per build with `-DCFG_TUSB_DEBUG=2` in `compiler.extra_flags` while bring-up is happening; it is `#ifndef`-guarded in both config headers, so no file editing is needed. Leave it `0` for isochronous audio even when debugging: logging runs in the USB ISR, and a 40-character line at 115200 baud blocks for ~3.5 ms — longer than a 1 ms audio frame. |
 | `CFG_TUD_CDC` | must be `2`. A unified config serves examples with two CDC interfaces, and `cdcd_open()` asserts on the second. |
 | `CFG_TUD_CDC_RX_BUFSIZE` / `_TX_BUFSIZE` | per-instance CDC buffers |
 
