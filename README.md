@@ -182,18 +182,64 @@ Two host examples are board-limited:
 
 ## Configuration
 
-Each example carries its own `tusb_config.h`, so a sketch's settings live with
-the sketch. You do not need to touch `compiler.extra_flags` — the IDE picks the
-example's config up automatically.
+Out of the box every example builds against the **full union** — device *and*
+host stacks, every class driver compiled in — so all 34 work with nothing to
+configure. The union is a preset, `src/config/tusb_config_union.h`; the file the
+stack actually reads is `src/tusb_config_arduinotinyusb.h`, which is a one-line
+`#include` of that preset.
 
-The library-wide defaults live in `src/tusb_config_arduinotinyusb.h`. Common
-knobs:
+### Optimizing Flash and RAM
+
+The union is cheap on the GIGA R1 (1.9 MB flash, 511 KB RAM) and expensive on
+the 32 KB-SRAM SAMD boards. Measured cost of the union, same sketch built both
+ways:
+
+| Example | Board | Flash | Static RAM | RAM used |
+|---|---|---|---|---|
+| `Device_CDC` | Zero | 34956 → 19044 (−15.9 KB) | 17032 → 5476 | **51% → 17%** |
+| `Host_MIDI` | Zero | 57228 → 22420 (−34.8 KB) | 22036 → 5316 | **67% → 16%** |
+| `Device_CDC` | GIGA | 140232 → 121904 (−18.3 KB) | 61432 → 49912 | 11.7% → 9.5% |
+
+Each example ships a ready-made single-role config as
+`examples/<Name>/tusb_config_arduinotinyusb.h`. To build one lean:
+
+1. Edit that file in your sketch — it is never overwritten by a library update,
+   and setting `CFG_TUD_*` / `CFG_TUH_*` to `1` is how you mix and match classes.
+   Anything you leave out defaults to `0` and is not compiled.
+2. Copy it over the library's active config, overwriting the one-line file:
+
+   ```sh
+   cp examples/Device_CDC/tusb_config_arduinotinyusb.h \
+      ~/Arduino/libraries/TinyUSB_Arduino/src/tusb_config_arduinotinyusb.h
+   ```
+3. To go back to the union — **required before building a different example**:
+
+   ```sh
+   cp src/config/tusb_config_union.h src/tusb_config_arduinotinyusb.h
+   ```
+
+A single-role config compiles in one side only, so the other side's examples
+stop building. That is deliberate and it fails loudly: a compile error names the
+missing `tud_*`/`tuh_*` call, rather than a link error or a silent no-op.
+
+> Why a copy and not an `#include`? The Arduino build never puts your sketch
+> folder on the include path for library sources, so a config next to your
+> `.ino` is invisible to the stack — and including it from the `.ino` would
+> change only your sketch's translation unit, leaving the library's out of sync.
+
+### Common knobs
+
+Buffer sizes, audio settings, event-queue depth and the debug level live in
+`src/config/tusb_config_common.h`; class counts and the device/host role live in
+the active config.
 
 | Macro | Notes |
 |---|---|
-| `CFG_TUSB_DEBUG` | Defaults to `0` (off), the upstream TinyUSB default. `1` = errors, `2` = verbose. Opt in per build with `-DCFG_TUSB_DEBUG=2` in `compiler.extra_flags` while bring-up is happening; it is `#ifndef`-guarded in both config headers, so no file editing is needed. Leave it `0` for isochronous audio even when debugging: logging runs in the USB ISR, and a 40-character line at 115200 baud blocks for ~3.5 ms — longer than a 1 ms audio frame. |
-| `CFG_TUD_CDC` | must be `2`. A unified config serves examples with two CDC interfaces, and `cdcd_open()` asserts on the second. |
+| `CFG_TUSB_DEBUG` | Defaults to `0` (off), the upstream TinyUSB default. `1` = errors, `2` = verbose. It is `#ifndef`-guarded, so `-DCFG_TUSB_DEBUG=2` works from `compiler.extra_flags` on a command line — but the Arduino IDE has no UI for extra build flags, so in the IDE edit `src/config/tusb_config_common.h` instead. **Leave it `0` for isochronous audio even when debugging**: logging runs in the USB ISR, and a 40-character line at 115200 baud blocks for ~3.5 ms, longer than a 1 ms audio frame. |
+| `CFG_TUD_ENABLED` / `CFG_TUH_ENABLED` | which role to compile in. Both `1` is the union; a device-role config sets `CFG_TUH_ENABLED 0`. |
+| `CFG_TUD_CDC` | in the union, `2` — it serves examples with two CDC interfaces and `cdcd_open()` asserts on the second. Set `1` for a single-CDC sketch. |
 | `CFG_TUD_CDC_RX_BUFSIZE` / `_TX_BUFSIZE` | per-instance CDC buffers |
+| `CFG_TUD_TASK_QUEUE_SZ` / `CFG_TUH_TASK_QUEUE_SZ` | event-queue depth, `64`. Do not trim to 16: bursty EP0 traffic during enumeration overflows it and drops SETUP events (observed on hardware). |
 
 ## Per-board build notes
 

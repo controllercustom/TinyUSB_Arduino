@@ -1,4 +1,18 @@
 TinyUSB vendored sources — DO NOT EDIT except sam3x/ port + tusb_option.h/tusb_mcu.h SAM3X entries.
+
+Config layout (Arduino-local, not upstream):
+- src/tusb_config_arduinotinyusb.h is the ONLY config the stack reads
+  (src/tusb_config.h includes it; src/tusb_option.h includes that). It is a
+  one-line include of config/tusb_config_union.h.
+- src/config/tusb_config_union.h — full union preset (device+host, all classes),
+  the shipped default and the restore point.
+- src/config/tusb_config_common.h — board/MCU/OS/queues/buffers/audio/debug,
+  shared by the union preset and every per-example template.
+- examples/<Name>/tusb_config_arduinotinyusb.h — INERT single-role template per
+  example. Not read where it sits; copy over src/tusb_config_arduinotinyusb.h to
+  activate. Restore with config/tusb_config_union.h.
+- -DARDUINO_TINYUSB_CONFIG_FILE="<abs path>" (src/tusb_option.h) still selects a
+  config directly, and is what the CI matrix uses to compile-check templates.
 Upstream: https://github.com/hathach/tinyusb
 Pinned commit: b80f1c107d0a33eb3be055f95fe0b3b9d6c0be48 (master, 2026-09-22)
 License: MIT (see LICENSE).

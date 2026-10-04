@@ -6,7 +6,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Per-example config templates are now reachable.** Each example ships
+  `examples/<Name>/tusb_config_arduinotinyusb.h`: a single-role config (device
+  *or* host, only the classes that example uses). Previously these existed as
+  `tusb_config.h` and were never read by any build — the README claimed the IDE
+  picked them up automatically, which it does not, because the Arduino build
+  puts the sketch folder on no include path for library sources. Copying the
+  template over `src/tusb_config_arduinotinyusb.h` is what activates it, and
+  that is now documented in the README with measured Flash/RAM figures per
+  board.
+- `src/config/tusb_config_union.h`: the full union as a named preset, so
+  restoring the default after specializing is one `cp`. The active config
+  `src/tusb_config_arduinotinyusb.h` is now a one-line include of it, which
+  removes the duplicate copy of the union that restoring would otherwise need.
+
 ### Changed
+
+- **Building the wrong example against a specialized config now fails at compile
+  time**, on the missing `tud_*`/`tuh_*` call itself, instead of at link time or
+  — worse — as a silently empty function body. `src/ArduinoTinyUSB.h` guards the
+  role-specific entry points on `CFG_TUD_ENABLED` / `CFG_TUH_ENABLED`.
+- The per-example configs no longer carry an ESP32 `#include_next` branch whose
+  stated premise (that the sketch directory precedes the vendored config on the
+  include path) does not hold.
 
 - **Library-wide `CFG_TUSB_DEBUG` default lowered from `2` to `0`** (the
   upstream TinyUSB default), in both `src/tusb_config_arduinotinyusb.h` and

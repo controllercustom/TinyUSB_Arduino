@@ -6,8 +6,13 @@
  * CFG_TUH_ENABLED plus its class counts FIRST, then includes this file,
  * so the `#if CFG_TUD/TUH_ENABLED` size blocks below resolve correctly.
  *
+ * Those "signature headers" are the per-example config templates: each
+ * example folder ships a tusb_config_arduinotinyusb.h that a user copies over
+ * src/tusb_config_arduinotinyusb.h to build that example against only the
+ * classes and the role it actually uses.
+ *
  * Board/MCU/OS/queue/debug sections are verbatim from
- * src/tusb_config_arduinotinyusb.h (the unified fallback).
+ * src/config/tusb_config_union.h (the full-union preset).
  */
 
 #include "ArduinoTinyUSB/board_auto.h"

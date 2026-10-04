@@ -19,9 +19,24 @@
 
 #include <Arduino.h>
 
-// Conflict workaround: SAMD core USBCore.h defines these
+// Conflict workaround: SAMD core USBCore.h defines these.
+// Must stay AFTER Arduino.h (which pulls USBCore.h in on SAMD, defining them
+// as macros) and BEFORE the tusb.h include below, where msc.h needs the real
+// enums.
 #undef MSC_SUBCLASS_SCSI
 #undef MSC_PROTOCOL_BULK_ONLY
+
+// TinyUSB core header — always the vendored copy in src/.
+// Included HERE, before the API declarations further down, because those are
+// guarded on CFG_TUD_ENABLED / CFG_TUH_ENABLED and tusb.h is what resolves
+// the active config (src/tusb_config_arduinotinyusb.h) that defines them.
+#ifdef __cplusplus
+extern "C" {
+#endif
+  #include "tusb.h"
+#ifdef __cplusplus
+}
+#endif
 
 // Console Defaults
 // Due: Serial = UART programming port (ATmega16U2 bridge), safe to use.
@@ -75,8 +90,14 @@
 extern "C" {
 #endif
 
+// Role guards: a specialized config (one copied over
+// src/tusb_config_arduinotinyusb.h) compiles in only the role it names, so
+// the matching entry points do not exist. Guarding the declarations turns
+// "built the wrong example against a specialized config" into a compile error
+// on the call itself, naming the fix, instead of an undefined reference at
+// link time or — worse — a silently empty function body.
+#if CFG_TUD_ENABLED
 void tud_arduino_init(void);
-void tuh_arduino_init(void);
 // Device task pump: call in loop() instead of bare tud_task().
 // ESP32 runs FreeRTOS, where bare tud_task() (= tud_task_ext(UINT32_MAX))
 // blocks forever on an empty event queue, freezing loop() whenever USB
@@ -84,11 +105,17 @@ void tuh_arduino_init(void);
 // reports/prints).
 // Everywhere else this is a plain tud_task() wrapper.
 void tud_arduino_task(void);
+#endif // CFG_TUD_ENABLED
+
+#if CFG_TUH_ENABLED
+void tuh_arduino_init(void);
 // Host task pump: call in loop() instead of bare tuh_task(). Plain wrapper
 // on every supported board (on ESP32 it is tuh_task_ext(0, false), since bare
 // tuh_task() blocks on the FreeRTOS queue and freezes loop()).
 void tuh_arduino_poll(void);
+#endif // CFG_TUH_ENABLED
 
+// Role-agnostic: always available, whichever side the config compiles in.
 void arduino_tinyusb_probe(void);
 
 #ifdef __cplusplus
@@ -122,13 +149,4 @@ void hcd_sam3x_ring(uint32_t *out64);
 #ifdef __cplusplus
 }
 #endif
-#endif
-
-// TinyUSB core header — always the vendored copy in src/.
-#ifdef __cplusplus
-extern "C" {
-#endif
-  #include "tusb.h"
-#ifdef __cplusplus
-}
 #endif
