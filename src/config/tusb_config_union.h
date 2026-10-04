@@ -32,6 +32,11 @@
 
 #include "ArduinoTinyUSB/board_auto.h"
 
+// Include guard is deliberately NOT ARDUINO_TINYUSB_TUSB_CONFIG_H, which the
+// per-example templates use: a template copied over
+// src/tusb_config_arduinotinyusb.h must be able to coexist with a direct
+// include of this preset (the -DARDUINO_TINYUSB_CONFIG_FILE path), so the two
+// files cannot share a guard or one would silently vanish.
 #ifndef ARDUINO_TINYUSB_TUSB_CONFIG_UNION_H
 #define ARDUINO_TINYUSB_TUSB_CONFIG_UNION_H
 
